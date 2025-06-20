@@ -9,6 +9,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// convoy routes
 const convoysRoute = require('./routes/Convoys');
 app.use('/api/convoys', convoysRoute);
 

@@ -1,27 +1,13 @@
-// routes/convoys.js
 const express = require('express');
 const router = express.Router();
-const Convoy = require('../models/convoy');
+const convoyController = require('../controllers/convoys');
 
-// Create a new convoy
-router.post('/', async (req, res) => {
-    try {
-        const convoy = new Convoy(req.body);
-        const saved = await convoy.save();
-        res.status(201).json(saved);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
-    }
-});
+router.post('/', convoyController.createConvoy);
+router.get('/', convoyController.getAllConvoys);
+router.put('/:id', convoyController.updateConvoy);
+router.patch('/:id', convoyController.patchConvoy);
+router.delete('/all', convoyController.deleteAllConvoys);
+router.delete('/:id', convoyController.deleteConvoy);
 
-// Get all convoys
-router.get('/', async (req, res) => {
-    try {
-        const convoys = await Convoy.find();
-        res.json(convoys);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
 
 module.exports = router;

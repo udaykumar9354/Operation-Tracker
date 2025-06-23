@@ -45,4 +45,6 @@ const convoySchema = new mongoose.Schema({
   }
 });
 
+
+
 module.exports = mongoose.model('Convoy', convoySchema);

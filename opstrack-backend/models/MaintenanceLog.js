@@ -6,11 +6,29 @@ const maintenanceLogSchema = new mongoose.Schema({
     ref: 'Vehicle',
     required: true
   },
-  date: { type: Date, default: Date.now },
-  description: { type: String, required: true },
-  serviceProvider: { type: String },
-  cost: { type: Number, default: 0 },
-  nextScheduledMaintenance: { type: Date }
+  
+  date: { 
+    type: Date, 
+    default: Date.now 
+  },
+  
+  description: { 
+    type: String, 
+    required: true 
+  },
+  
+  serviceProvider: { 
+    type: String
+  },
+  
+  cost: { 
+    type: Number, 
+    default: 0 
+  },
+  
+  nextScheduledMaintenance: { 
+    type: Date 
+  }
 });
 
 module.exports = mongoose.model('MaintenanceLog', maintenanceLogSchema);

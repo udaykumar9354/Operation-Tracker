@@ -1,4 +1,5 @@
 const Convoy = require('../models/Convoy');
+const CommandingOfficer = require('../models/CommandingOfficer');
 
 // Create a new convoy
 exports.createConvoy = async (req, res) => {
@@ -15,7 +16,21 @@ exports.createConvoy = async (req, res) => {
 exports.getAllConvoys = async (req, res) => {
   try {
     const convoys = await Convoy.find();
+    if (convoys.length === 0) {
+      return res.status(200).json({ message: 'No convoys found' });
+    }
     res.json(convoys);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Get a convoy by id
+exports.getConvoyById = async (req, res) => {
+  try {
+    const convoy = await Convoy.findById(req.params.id);  
+    if (!convoy) return res.status(404).json({ message: 'Convoy not found' });
+    res.json(convoy);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

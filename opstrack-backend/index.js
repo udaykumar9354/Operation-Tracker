@@ -10,8 +10,25 @@ app.use(cors());
 app.use(express.json());
 
 // convoy routes
-const convoysRoute = require('./routes/Convoys');
+const convoysRoute = require('./routes/convoys');
 app.use('/api/convoys', convoysRoute);
+
+// vehicle routes
+const vehiclesRoute = require('./routes/vehicle');
+app.use('/api/vehicles', vehiclesRoute);
+
+// commanding officer routes
+const commandingOfficersRoute = require('./routes/commandingOfficer');
+app.use('/api/CO', commandingOfficersRoute);
+
+// maintenance log routes
+const maintenanceLogsRoute = require('./routes/maintenanceLog');
+app.use('/api/logs', maintenanceLogsRoute);
+
+// user routes
+const usersRoute = require('./routes/user');
+app.use('/api/users', usersRoute);
+
 
 const PORT = process.env.PORT || 5000;
 

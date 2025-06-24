@@ -1,17 +1,25 @@
 const express = require('express');
 const router = express.Router();
 const vehicleController = require('../controllers/vehicle');
+const { verifyToken, allowRoles } = require('../middleware/auth');
 
-router.post('/', vehicleController.createVehicle);
+// admin and logistics can create a vehicle
+router.post('/', verifyToken, allowRoles('admin', 'logistics'), vehicleController.createVehicle);
 
-router.get('/', vehicleController.getAllVehicles);
-router.get('/:id', vehicleController.getVehicleById);
+// admin and logistics can get all vehicles, commander can only see their own vehicles
+router.get('/convoy/:convoyId', verifyToken, allowRoles('admin', 'logistics'), vehicleController.getAllVehicles);
+router.get('/:id', verifyToken, allowRoles('commander', 'admin', 'logistics'), vehicleController.getVehicleById);
 
-router.put('/:id', vehicleController.updateVehicle);
+// admin and logistics can update all vehicles
+router.put('/:id', verifyToken, allowRoles('admin', 'logistics'), vehicleController.updateVehicle);
 
-router.patch('/:id', vehicleController.patchVehicle);
+// admin and logistics can patch all vehicles
+router.patch('/:id', verifyToken, allowRoles('admin', 'logistics'), vehicleController.patchVehicle);
 
-router.delete('/all', vehicleController.deleteAllVehicles);
-router.delete('/:id', vehicleController.deleteVehicleById);
+// admin and logistics can delete all vehicles
+router.delete('/all', verifyToken, allowRoles('admin', 'logistics'), vehicleController.deleteAllVehicles);
+
+// admin and logistics can delete a vehicle
+router.delete('/:id', verifyToken, allowRoles('admin', 'logistics'), vehicleController.deleteVehicleById);
 
 module.exports = router;

@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken');
 // Create a new user- only admin can create users
 exports.createUser = async (req, res) => {
   try {
-    const { username, email, password, role, convoy } = req.body;
+    const { name, rank, username, email, password, role, convoy } = req.body;
 
     const allowedRoles = ['admin', 'commander', 'logistics'];
     if (!allowedRoles.includes(role)) {
@@ -18,7 +18,8 @@ exports.createUser = async (req, res) => {
       return res.status(400).json({ error: 'Username or email already exists' });
     }
 
-    if (role === 'commander') {
+    // Only check convoy if role is commander AND convoy is provided (not null/undefined)
+    if (role === 'commander' && convoy) {
       const convoyDoc = await Convoy.findById(convoy);
       if (!convoyDoc) {
         return res.status(400).json({ error: 'Invalid convoy ID for commander' });
@@ -29,11 +30,14 @@ exports.createUser = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, salt);
 
     const newUser = new User({
+      name,
+      rank,
       username,
       email,
       passwordHash,
       role,
-      convoy: role === 'commander' ? convoy : null
+      // Assign convoy only if role is commander and convoy is provided, else null
+      convoy: role === 'commander' && convoy ? convoy : null
     });
 
     const savedUser = await newUser.save();
@@ -49,6 +53,7 @@ exports.createUser = async (req, res) => {
     res.status(400).json({ error: err.message });
   }
 };
+
 
 // Login a user
 exports.loginUser = async (req, res) => {
@@ -99,6 +104,17 @@ exports.getAllUsers = async (req, res) => {
 exports.getUserById = async (req, res) => {
     try {
         const user = await User.findById(req.params.id);
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        res.json(user);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+
+// Get a user by username
+exports.getUserByUsername = async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.params.username });
         if (!user) return res.status(404).json({ message: 'User not found' });
         res.json(user);
     } catch (err) {

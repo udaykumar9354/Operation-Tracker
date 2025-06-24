@@ -70,3 +70,17 @@ exports.patchMaintenanceLog = async (req, res) => {
     }
 };
 
+// Delete a maintenance log
+exports.deleteMaintenanceLog = async (req, res) => {
+    try {
+        // check if the maintenance log exists
+        const maintenanceLog = await MaintenanceLog.findById(req.params.id);
+        if (!maintenanceLog) return res.status(404).json({ error: 'Maintenance log not found' });
+        const deleted = await MaintenanceLog.findByIdAndDelete(req.params.id);
+        if (!deleted) return res.status(404).json({ error: 'Maintenance log not found' });
+        res.json({ message: 'Maintenance log deleted successfully' });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+};
+

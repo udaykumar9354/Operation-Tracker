@@ -15,7 +15,7 @@ const vehicleSchema = new mongoose.Schema({
 
   fuelLevel: {
     type: Number,
-    default: 100 
+    default: 100
   },
 
   status: {
@@ -39,12 +39,18 @@ const vehicleSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Convoy',
     required: false
-   },
+  },
 
   lastUpdated: {
     type: Date,
     default: Date.now
-  }
+  },
+
+  maintenanceLogs: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'MaintenanceLog',
+    required: false
+  }]
 });
 
 module.exports = mongoose.model('Vehicle', vehicleSchema);

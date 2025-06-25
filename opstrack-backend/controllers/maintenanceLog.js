@@ -2,22 +2,26 @@ const MaintenanceLog = require('../models/MaintenanceLog');
 const Vehicle = require('../models/Vehicle');
 const Convoy = require('../models/Convoy');
 
+
 // Create a new maintenance log
 exports.createMaintenanceLog = async (req, res) => {
-    try {
-        // Check if the vehicle exists
-        const vehicleExists = await Vehicle.findById(req.body.vehicle);
-        if (!vehicleExists) {
-            return res.status(400).json({ error: 'Vehicle does not exist' });
-        }
-
-        // Create the log if vehicle exists
-        const maintenanceLog = new MaintenanceLog(req.body);
-        const saved = await maintenanceLog.save();
-        res.status(201).json(saved);
-    } catch (err) {
-        res.status(400).json({ error: err.message });
+  try {
+    const vehicle = await Vehicle.findById(req.body.vehicle);
+    if (!vehicle) {
+      return res.status(400).json({ error: 'Vehicle does not exist' });
     }
+
+    const maintenanceLog = new MaintenanceLog(req.body);
+    const saved = await maintenanceLog.save();
+
+    // Add maintenanceLog id to vehicle.maintenanceLogs array
+    vehicle.maintenanceLogs.push(saved._id);
+    await vehicle.save();
+
+    res.status(201).json(saved);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
 };
 
 
@@ -80,14 +84,19 @@ exports.patchMaintenanceLog = async (req, res) => {
 // Delete a maintenance log
 exports.deleteMaintenanceLog = async (req, res) => {
     try {
-        // check if the maintenance log exists
-        const maintenanceLog = await MaintenanceLog.findById(req.params.id);
-        if (!maintenanceLog) return res.status(404).json({ error: 'Maintenance log not found' });
-        const deleted = await MaintenanceLog.findByIdAndDelete(req.params.id);
-        if (!deleted) return res.status(404).json({ error: 'Maintenance log not found' });
-        res.json({ message: 'Maintenance log deleted successfully' });
+      const maintenanceLog = await MaintenanceLog.findById(req.params.id);
+      if (!maintenanceLog) return res.status(404).json({ error: 'Maintenance log not found' });
+  
+      // Remove maintenanceLog id from vehicle's maintenanceLogs array
+      await Vehicle.findByIdAndUpdate(maintenanceLog.vehicle, { 
+        $pull: { maintenanceLogs: maintenanceLog._id }
+      });
+  
+      const deleted = await MaintenanceLog.findByIdAndDelete(req.params.id);
+      if (!deleted) return res.status(404).json({ error: 'Maintenance log not found' });
+  
+      res.json({ message: 'Maintenance log deleted successfully' });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message });
     }
-};
-
+  };

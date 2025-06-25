@@ -15,7 +15,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     enum: ['admin', 'commander', 'logistics'],
     required: true
+  },
+  convoy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Convoy',
+    default: null
   }
+  
 }, { timestamps: true });
 
 

@@ -4,7 +4,7 @@ const userController = require('../controllers/user');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
 
-// router.post('/', userController.createUser); (if i forget password)
+// router.post('/', userController.createUser); //(if i forget password)
 router.post('/', verifyToken, allowRoles('admin'), userController.createUser);
 router.post('/login', userController.loginUser);
 router.get('/', verifyToken, allowRoles('admin'), userController.getAllUsers);

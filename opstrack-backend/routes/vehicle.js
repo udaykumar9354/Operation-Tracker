@@ -22,4 +22,8 @@ router.delete('/all', verifyToken, allowRoles('admin', 'logistics'), vehicleCont
 // admin and logistics can delete a vehicle
 router.delete('/:id', verifyToken, allowRoles('admin', 'logistics'), vehicleController.deleteVehicleById);
 
+// admin and logistics can assign a vehicle to a convoy
+router.post('/assign', verifyToken, allowRoles('admin', 'logistics'), vehicleController.assignVehicleToConvoy);
+
+
 module.exports = router;

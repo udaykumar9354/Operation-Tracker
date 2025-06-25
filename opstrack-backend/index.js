@@ -17,10 +17,6 @@ app.use('/api/convoys', convoysRoute);
 const vehiclesRoute = require('./routes/vehicle');
 app.use('/api/vehicles', vehiclesRoute);
 
-// commanding officer routes
-const commandingOfficersRoute = require('./routes/commandingOfficer');
-app.use('/api/CO', commandingOfficersRoute);
-
 // maintenance log routes
 const maintenanceLogsRoute = require('./routes/maintenanceLog');
 app.use('/api/logs', maintenanceLogsRoute);

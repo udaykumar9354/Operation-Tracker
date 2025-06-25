@@ -1,110 +1,180 @@
 const Convoy = require('../models/Convoy');
-const CommandingOfficer = require('../models/CommandingOfficer');
+const User = require('../models/User');
+const Vehicle = require('../models/Vehicle');
 
 // Create a new convoy
 exports.createConvoy = async (req, res) => {
   try {
-    const convoy = new Convoy(req.body);
+    const { name, commander, status, vehicles, route } = req.body;
+    
+    // Validate commander
+    const commanderUser = await User.findById(commander);
+    if (!commanderUser) return res.status(404).json({ error: 'Commander not found' });
+    if (commanderUser.role !== 'commander') return res.status(400).json({ error: 'User is not a commander' });
+    
+    // Create convoy
+    const convoy = new Convoy({ 
+      name, 
+      commander: commanderUser._id,
+      vehicles: vehicles || [],
+      status: status || 'active',
+      route: route || []
+    });
+    
     const saved = await convoy.save();
-    res.status(201).json(saved);
+    
+    // Populate response for better UX
+    const populated = await Convoy.findById(saved._id)
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    
+    res.status(201).json(populated);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    if (err.code === 11000 && err.keyPattern.name) {
+      return res.status(400).json({ error: 'Convoy name already exists' });
+    }
+    res.status(400).json({ 
+      error: err.message,
+    });
   }
 };
 
-// Get all convoys (admin and logistics can see all convoys)
+// Get all convoys
 exports.getAllConvoys = async (req, res) => {
   try {
-    const convoys = await Convoy.find();
-    if (convoys.length === 0) {
-      return res.status(200).json({ message: 'No convoys found' });
-    }
-    res.json(convoys);
+    const convoys = await Convoy.find()
+      .populate('commander', 'name rank') // Fixed syntax
+      .populate('vehicles', 'vehicleId type status'); // Fixed syntax
+    
+    res.json(convoys.length > 0 ? convoys : { message: 'No convoys found' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Get a convoy by id (commander can only see their own convoy but admin and logistics can see all convoys)
+// Get specific convoy
 exports.getConvoyById = async (req, res) => {
   try {
-    // if commander, check if they are the commander of the convoy
-    if (req.user.role === 'commander') {
-      const convoy = await Convoy.findById(req.params.id);
-      if (!convoy) return res.status(404).json({ message: 'Convoy not found' });
-      if (convoy.commander.toString() !== req.user.id) return res.status(403).json({ message: 'You are not authorized to access this convoy' });
-    }
-    const convoy = await Convoy.findById(req.params.id);  
+    const convoy = await Convoy.findById(req.params.id)
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    
     if (!convoy) return res.status(404).json({ message: 'Convoy not found' });
+    
+    // Commander authorization
+    if (req.user.role === 'commander' && 
+        convoy.commander._id.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Unauthorized access' });
+    }
+    
     res.json(convoy);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
 
-// Update convoy (full update - PUT) (admin and logistics can update all convoys)
-exports.updateConvoy = async (req, res) => {
-    try {
-      // check if the convoy exists
-      const convoy = await Convoy.findById(req.params.id);
-      if (!convoy) return res.status(404).json({ error: 'Convoy not found' });
-      const updated = await Convoy.findByIdAndUpdate(req.params.id, req.body, {
-        new: true,
-        runValidators: true
-      });
-      if (!updated) return res.status(404).json({ error: 'Convoy not found' });
-      res.json(updated);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  };
-  
-  // Patch convoy (partial update - PATCH) (admin and logistics can update all convoys)
-  exports.patchConvoy = async (req, res) => {
-    try {
-      // check if the convoy exists
-      const convoy = await Convoy.findById(req.params.id);
-      if (!convoy) return res.status(404).json({ error: 'Convoy not found' });
-      const updated = await Convoy.findByIdAndUpdate(req.params.id, req.body, {
-        new: true
-      });
-      if (!updated) return res.status(404).json({ error: 'Convoy not found' });
-      res.json(updated);
-    } catch (err) {
-      res.status(400).json({ error: err.message });
-    }
-  };
-  
-  // Delete convoy (admin and logistics can delete all convoys)
-  exports.deleteConvoy = async (req, res) => {
-    try {
-      // check if the convoy exists
-      const convoy = await Convoy.findById(req.params.id);
-      if (!convoy) return res.status(404).json({ error: 'Convoy not found' });
-      // check if the convoy has any vehicles
-      const vehicles = await Vehicle.find({ convoy: req.params.id });
-      if (vehicles.length > 0) return res.status(400).json({ error: 'Convoy has vehicles and cannot be deleted' });
-      const deleted = await Convoy.findByIdAndDelete(req.params.id);
-      if (!deleted) return res.status(404).json({ error: 'Convoy not found' });
-      res.json({ message: 'Convoy deleted successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
-    }
-  };
+// Get commander's convoy
+exports.getMyConvoy = async (req, res) => {
+  try {
+    const convoy = await Convoy.findOne({ commander: req.user.id })
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    
+    if (!convoy) return res.status(404).json({ message: 'No convoy assigned to you' });
+    
+    res.json(convoy);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
 
-  // Delete all convoys (admin and logistics can delete all convoys)
-exports.deleteAllConvoys = async (req, res) => {
-    try {
-      // check if there are any convoys
-      const convoys = await Convoy.find();
-      if (convoys.length === 0) {
-        return res.status(200).json({ message: 'No convoys found' });
-      }
-      await Convoy.deleteMany({});
-      res.status(200).json({ message: 'All convoys deleted successfully' });
-    } catch (err) {
-      res.status(500).json({ error: err.message });
+// Update convoy (PUT)
+exports.updateConvoy = async (req, res) => {
+  try {
+    const { commander, ...updateData } = req.body;
+    
+    // Validate commander if included in update
+    if (commander) {
+      const commanderUser = await User.findById(commander);
+      if (!commanderUser) return res.status(404).json({ error: 'Commander not found' });
+      if (commanderUser.role !== 'commander') return res.status(400).json({ error: 'User is not a commander' });
+      updateData.commander = commander;
     }
-  };
-  
-  
+    
+    const updated = await Convoy.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true, runValidators: true }
+    )
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    
+    if (!updated) return res.status(404).json({ error: 'Convoy not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Update convoy (PATCH)
+exports.patchConvoy = async (req, res) => {
+  try {
+    const { commander, ...updateData } = req.body;
+    
+    // Validate commander if included in update
+    if (commander) {
+      const commanderUser = await User.findById(commander);
+      if (!commanderUser) return res.status(404).json({ error: 'Commander not found' });
+      if (commanderUser.role !== 'commander') return res.status(400).json({ error: 'User is not a commander' });
+      updateData.commander = commander;
+    }
+    
+    const updated = await Convoy.findByIdAndUpdate(
+      req.params.id, 
+      updateData, 
+      { new: true }
+    )
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    
+    if (!updated) return res.status(404).json({ error: 'Convoy not found' });
+    res.json(updated);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
+
+// Delete convoy
+exports.deleteConvoy = async (req, res) => {
+  try {
+    const convoy = await Convoy.findById(req.params.id);
+    if (!convoy) return res.status(404).json({ error: 'Convoy not found' });
+    
+    // Check for assigned vehicles
+    const vehicleCount = await Vehicle.countDocuments({ convoy: req.params.id });
+    if (vehicleCount > 0) {
+      return res.status(400).json({ error: 'Convoy has assigned vehicles' });
+    }
+    
+    await Convoy.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Convoy deleted' , convoy});
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// Delete all convoys
+exports.deleteAllConvoys = async (req, res) => {
+  try {
+    // Check for any vehicles assigned to convoys
+    const vehicleCount = await Vehicle.countDocuments({ convoy: { $exists: true, $ne: null } });
+    if (vehicleCount > 0) {
+      return res.status(400).json({ error: 'Some convoys have assigned vehicles' });
+    }
+    
+    const result = await Convoy.deleteMany();
+    res.json({ message: `${result.deletedCount} convoys deleted` });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

@@ -7,7 +7,7 @@ const { verifyToken, allowRoles } = require('../middleware/auth');
 router.post('/', verifyToken, allowRoles('admin'), convoyController.createConvoy);
 
 // admin and logistics can get all convoys
-router.get('/', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
+router.get('/all', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
 // commander can only see their own convoy 
 router.get('/:id', verifyToken, allowRoles('commander', 'admin', 'logistics'), convoyController.getConvoyById)
 
@@ -19,6 +19,9 @@ router.patch('/:id', verifyToken, allowRoles('admin', 'logistics'), convoyContro
 // admin and logistics can delete all convoys
 router.delete('/all', verifyToken, allowRoles('admin', 'logistics'), convoyController.deleteAllConvoys);
 router.delete('/:id', verifyToken, allowRoles('admin', 'logistics'), convoyController.deleteConvoy);
+
+// commander-specific routes
+router.get('/my-convoy', verifyToken, allowRoles('commander'), convoyController.getMyConvoy);
 
 
 module.exports = router;

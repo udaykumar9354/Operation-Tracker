@@ -89,15 +89,16 @@ exports.loginUser = async (req, res) => {
 
 // Get all users
 exports.getAllUsers = async (req, res) => {
-    try {
-        const users = await User.find();
-        if (users.length === 0) {
-            return res.status(200).json({ message: 'No users found' });
-        }
-        res.json(users);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
+  try {
+    // check if the user is an admin or logistics
+    if (req.user.role !== 'admin' && req.user.role !== 'logistics') {
+      return res.status(403).json({ error: 'Unauthorized access' });
     }
+    const users = await User.find({}, 'name rank username email role convoy');
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 };
 
 // Get a user by id

@@ -26,3 +26,14 @@ exports.allowRoles = (...roles) => {
         next();
     };
 };
+
+// Add convoy authorization for commanders
+exports.authorizeConvoyAccess = async (req, res, next) => {
+    if (req.user.role === 'commander') {
+      const convoy = await Convoy.findOne({ commander: req.user.id });
+      if (!convoy || convoy._id.toString() !== req.params.id) {
+        return res.status(403).json({ message: 'Unauthorized convoy access' });
+      }
+    }
+    next();
+  };

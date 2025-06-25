@@ -37,8 +37,9 @@ const vehicleSchema = new mongoose.Schema({
 
   convoy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Convoy'
-  },
+    ref: 'Convoy',
+    required: false
+   },
 
   lastUpdated: {
     type: Date,

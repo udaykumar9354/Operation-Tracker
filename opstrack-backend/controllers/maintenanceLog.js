@@ -24,19 +24,26 @@ exports.createMaintenanceLog = async (req, res) => {
 // Get all maintenance logs
 exports.getAllMaintenanceLogs = async (req, res) => {
     try {
-        const maintenanceLogs = await MaintenanceLog.find();
-        if (maintenanceLogs.length === 0) {
-            return res.status(200).json({ message: 'No maintenance logs found' });
-        }
-        res.json(maintenanceLogs);
+      const logs = await MaintenanceLog.find()
+        .populate('vehicle', 'vehicleId type convoy')
+        .populate({
+          path: 'vehicle',
+          populate: { path: 'convoy', select: 'name' }
+        });
+      
+      res.json(logs);
     } catch (err) {
-        res.status(500).json({ error: err.message });
+      res.status(500).json({ error: err.message });
     }
-};
+  };
 
 exports.getMaintenanceLogById = async (req, res) => {
     try {
-        const log = await MaintenanceLog.findById(req.params.id).populate('vehicle');
+        const log = await MaintenanceLog.findById(req.params.id).populate('vehicle', 'vehicleId type convoy')
+        .populate({
+          path: 'vehicle',
+          populate: { path: 'convoy', select: 'name' }
+        });
         if (!log) return res.status(404).json({ message: 'Log not found' });
         res.json(log);
     } catch (err) {

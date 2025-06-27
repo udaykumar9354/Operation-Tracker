@@ -121,3 +121,50 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+// changing password function, in url if its admin, id must be given, if no id, self
+// password is changed
+
+exports.changePassword = async (req, res) => {
+  try {
+    const requesterRole = req.user.role;
+    const requesterId = req.user.id;
+    const targetUserId = req.params.id || requesterId;  // if no id param, use self
+    const { currentPassword, newPassword } = req.body;
+
+    // Validate new password
+    if (!newPassword || newPassword.length < 6) {
+      return res.status(400).json({ error: 'New password must be at least 6 characters long' });
+    }
+
+    // If user is logistics or commander, they can only change their own password
+    if (requesterRole !== 'admin' && targetUserId !== requesterId) {
+      return res.status(403).json({ error: 'Unauthorized to change another user\'s password' });
+    }
+
+    // Fetch user to update
+    const user = await User.findById(targetUserId);
+    if (!user) return res.status(404).json({ error: 'User not found' });
+
+    // If not admin, verify currentPassword before allowing change
+    if (requesterRole !== 'admin') {
+      if (!currentPassword) {
+        return res.status(400).json({ error: 'Current password is required' });
+      }
+      const isMatch = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!isMatch) {
+        return res.status(400).json({ error: 'Current password is incorrect' });
+      }
+    }
+
+    // Hash new password and update
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(newPassword, salt);
+    user.passwordHash = hashedPassword;
+    await user.save();
+
+    res.json({ message: 'Password changed successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

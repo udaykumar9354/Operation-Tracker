@@ -10,6 +10,7 @@ router.post('/login', userController.loginUser);
 router.get('/', verifyToken, allowRoles('admin'), userController.getAllUsers);
 router.get('/username/:username', verifyToken, allowRoles('admin'), userController.getUserByUsername);
 router.get('/:id', verifyToken, allowRoles('admin'), userController.getUserById);
+router.put('/change-password/:id?', verifyToken, userController.changePassword);
 router.patch('/:id', verifyToken, allowRoles('admin'), userController.patchUser);
 router.delete('/:id', verifyToken, allowRoles('admin'), userController.deleteUser);
 

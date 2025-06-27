@@ -27,6 +27,9 @@ exports.createVehicle = async (req, res) => {
       }
     }
 
+    // Default vehicle status to 'operational' if not provided
+    if (!data.status) data.status = 'operational';
+
     const vehicle = new Vehicle({ ...data, convoy });
     const saved = await vehicle.save();
 
@@ -50,7 +53,8 @@ exports.getAllVehicles = async (req, res) => {
       return res.status(403).json({ error: 'Unauthorized access' });
     }
     const vehicles = await Vehicle.find()
-      .populate('convoy', 'name status');
+      .populate('convoy', 'name status')
+      .populate('maintenanceLogs');
     res.json(vehicles);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -80,7 +84,7 @@ exports.assignVehicleToConvoy = async (req, res) => {
     }
 
     if (vehicle.status !== 'operational') {
-      return res.status(400).json({ message: 'Vehicle is not operational' });
+      return res.status(400).json({ message: 'Vehicle is not operational or under maintenance' });
     }
 
     vehicle.convoy = convoyId;

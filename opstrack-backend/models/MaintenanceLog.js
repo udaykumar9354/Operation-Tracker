@@ -13,7 +13,18 @@ const maintenanceLogSchema = new mongoose.Schema({
   },
   
   description: { 
-    type: String, 
+    type: String,
+    enum: [
+      'Oil Change',
+      'Tire Rotation',
+      'Brake Inspection',
+      'Engine Tune-up',
+      'Transmission Service',
+      'Battery Replacement',
+      'Fluid Check',
+      'Filter Replacement',
+      'Other'
+    ], 
     required: true 
   },
   
@@ -31,4 +42,5 @@ const maintenanceLogSchema = new mongoose.Schema({
   }
 });
 
+maintenanceLogSchema.index({ vehicle: 1, date: 1 }, { unique: true });
 module.exports = mongoose.model('MaintenanceLog', maintenanceLogSchema);

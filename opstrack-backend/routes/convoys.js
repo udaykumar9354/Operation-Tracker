@@ -9,7 +9,10 @@ router.post('/', verifyToken, allowRoles('admin'), convoyController.createConvoy
 // admin and logistics can get all convoys
 router.get('/all', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
 
-// commander-specific route must come BEFORE '/:id' to avoid route conflicts
+// get all active convoys (logistics, commander)
+router.get('/active', verifyToken, allowRoles('logistics', 'commander'), convoyController.getAllActiveConvoys);
+
+// commander-specific route 
 router.get('/my-convoy', verifyToken, allowRoles('commander'), convoyController.getMyConvoy);
 
 // get convoy by ID (admin, logistics, commander)

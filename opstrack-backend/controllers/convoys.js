@@ -65,6 +65,18 @@ exports.getConvoyById = async (req, res) => {
   }
 };
 
+// Get active convoys
+exports.getActiveConvoys = async (req, res) => {
+  try {
+    const convoys = await Convoy.find({ status: 'active' })
+      .populate('commander', 'name rank')
+      .populate('vehicles', 'vehicleId type status');
+    res.json(convoys.length > 0 ? convoys : { message: 'No active convoys found' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Get convoy for commander
 exports.getMyConvoy = async (req, res) => {
   try {

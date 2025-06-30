@@ -91,6 +91,30 @@ exports.getUserById = async (req, res) => {
   }
 };
 
+// returns user data including role for /users/me
+exports.getCurrentUser = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .populate('convoy', 'name status');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    res.json({
+      _id: user._id,
+      name: user.name,
+      rank: user.rank,
+      username: user.username,
+      email: user.email,
+      role: user.role,
+      convoy: user.convoy ? {
+        _id: user.convoy._id,
+        name: user.convoy.name,
+        status: user.convoy.status
+      } : null
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 exports.getUserByUsername = async (req, res) => {
   try {
     const user = await User.findOne({ username: req.params.username }).populate('convoy', 'name status');

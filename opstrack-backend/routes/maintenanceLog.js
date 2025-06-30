@@ -4,10 +4,10 @@ const maintenanceLogController = require('../controllers/maintenanceLog');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
 // admin and logistics can create a maintenance log
-router.post('/', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.createMaintenanceLog);
+router.post('/create', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.createMaintenanceLog);
 
 // admin and logistics can get all maintenance logs
-router.get('/', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.getAllMaintenanceLogs);
+router.get('/all-logs', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.getAllMaintenanceLogs);
 
 // admin and logistics can get a maintenance log by id
 router.get('/:id', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.getMaintenanceLogById);

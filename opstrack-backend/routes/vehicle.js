@@ -4,10 +4,10 @@ const vehicleController = require('../controllers/vehicle');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
 // admin and logistics can create a vehicle
-router.post('/', verifyToken, allowRoles('admin', 'logistics'), vehicleController.createVehicle);
+router.post('/create', verifyToken, allowRoles('admin', 'logistics'), vehicleController.createVehicle);
 
 // admin and logistics can get all vehicles, commander can only see their own vehicles
-router.get('/all', verifyToken, allowRoles('admin', 'logistics'), vehicleController.getAllVehicles);
+router.get('/all-vehicles', verifyToken, allowRoles('admin', 'logistics'), vehicleController.getAllVehicles);
 router.get('/convoy/:convoyId', verifyToken, allowRoles('commander', 'admin', 'logistics'), vehicleController.getVehiclesByConvoy);
 router.get('/:id', verifyToken, allowRoles('commander', 'admin', 'logistics'), vehicleController.getVehicleById);
 

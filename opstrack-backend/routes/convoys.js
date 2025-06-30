@@ -4,13 +4,13 @@ const convoyController = require('../controllers/convoys');
 const { verifyToken, allowRoles } = require('../middleware/auth');
 
 // admin can create a convoy
-router.post('/', verifyToken, allowRoles('admin'), convoyController.createConvoy);
+router.post('/create', verifyToken, allowRoles('admin'), convoyController.createConvoy);
 
 // admin and logistics can get all convoys
-router.get('/all', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
+router.get('/all-convoys', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
 
 // get all active convoys (logistics, commander)
-router.get('/active', verifyToken, allowRoles('logistics', 'commander'), convoyController.getAllActiveConvoys);
+router.get('/active', verifyToken, allowRoles('logistics', 'commander'), convoyController.getActiveConvoys);
 
 // commander-specific route 
 router.get('/my-convoy', verifyToken, allowRoles('commander'), convoyController.getMyConvoy);

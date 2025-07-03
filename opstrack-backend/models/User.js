@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const bcrypt = require('bcryptjs');
 
 const userSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -21,9 +22,12 @@ const userSchema = new mongoose.Schema({
     ref: 'Convoy',
     default: null
   }
-  
 }, { timestamps: true });
 
-
+userSchema.virtual('password')
+  .set(function (password) {
+    const salt = bcrypt.genSaltSync(10);
+    this.passwordHash = bcrypt.hashSync(password, salt);
+  });
 
 module.exports = mongoose.model('User', userSchema);

@@ -1,0 +1,149 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500&display=swap');
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.app-header {
+  width: 100vw;
+  padding: 1.5rem 0 1rem 0;
+  background: transparent;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.logo-container {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.logo-icon {
+  font-size: 2.2rem;
+  color: #22c55e;
+}
+
+.logo-text {
+  font-size: 2rem;
+  font-weight: bold;
+  letter-spacing: 1px;
+}
+
+.logo-primary {
+  color: #22c55e;
+}
+
+.logo-secondary {
+  color: #d1fae5;
+  margin-left: 0.2rem;
+}
+
+body {
+  font-family: 'Rajdhani', sans-serif;
+  background-color: #0a0f0d;
+  color: #d1fae5;
+  min-height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-image: linear-gradient(135deg, #0f1a17 0%, #1a2e28 100%);
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #0f1a17 0%, #1a2e28 100%);
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100vw;
+  min-height: 60vh;
+}
+
+form {
+  background-color: #11251e;
+  padding: 2.5rem;
+  border-radius: 10px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.6);
+  width: 100%;
+  max-width: 400px;
+  color: #d1fae5;
+  border: 1px solid #14532d;
+  box-sizing: border-box;
+}
+
+form h2 {
+  text-align: center;
+  font-size: 1.8rem;
+  margin-bottom: 2rem;
+  color: #22c55e;
+  letter-spacing: 1px;
+}
+
+input {
+  width: 100%;
+  padding: 0.9rem 1.25rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #14532d;
+  border-radius: 6px;
+  background-color: #0c1b17;
+  color: #d1fae5;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+
+input::placeholder {
+  color: #7dd3fc;
+}
+
+button {
+  width: 100%;
+  padding: 0.85rem;
+  margin-top: 0.5rem;
+  background-color: #166534;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #22c55e;
+}
+
+.error {
+  color: #f87171;
+  text-align: center;
+  font-size: 0.9rem;
+  margin-top: 0.75rem;
+}
+
+.app-footer {
+  width: 100vw;
+  padding: 1rem 0 0.5rem 0;
+  background: transparent;
+  text-align: center;
+  color: #7dd3fc;
+  font-size: 1rem;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  letter-spacing: 0.5px;
+  z-index: 10;
+}

@@ -25,7 +25,7 @@ const convoySchema = new mongoose.Schema({
     ref: 'User',
     required: true,
     validate: {
-      validator: async function(v) {
+      validator: async function (v) {
         const user = await mongoose.model('User').findById(v);
         return user && user.role === 'commander';
       },

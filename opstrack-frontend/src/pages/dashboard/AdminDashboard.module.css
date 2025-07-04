@@ -1,0 +1,75 @@
+.adminDashboard {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.dashboardContent {
+    max-width: 1200px;
+    margin: 80px auto 0 auto;
+    padding: 32px 16px 16px 16px;
+    flex: 1;
+}
+
+.dashboardTitle {
+    font-size: 2.2rem;
+    font-weight: 700;
+    margin-bottom: 32px;
+    letter-spacing: 1px;
+    text-align: left;
+}
+
+.statsSection {
+    display: flex;
+    gap: 24px;
+    margin-bottom: 40px;
+    flex-wrap: wrap;
+}
+
+.statCard {
+    min-width: 180px;
+    flex: 1 1 180px;
+    text-align: center;
+    transition: box-shadow 0.2s;
+}
+
+.featuresSection {
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+}
+
+.featureCard {
+    min-width: 240px;
+    flex: 1 1 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.featureBtn {
+    margin-bottom: 10px;
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.activityList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 0.98rem;
+}
+
+@media (max-width: 900px) {
+
+    .statsSection,
+    .featuresSection {
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .dashboardContent {
+        padding: 16px 4px 8px 4px;
+    }
+}

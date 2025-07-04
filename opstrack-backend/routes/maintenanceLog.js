@@ -9,6 +9,9 @@ router.post('/create', verifyToken, allowRoles('admin', 'logistics'), maintenanc
 // admin and logistics can get all maintenance logs
 router.get('/all-logs', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.getAllMaintenanceLogs);
 
+// admin and logistics can get active maintenance logs
+router.get('/active', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.countActiveMaintenanceLogs);
+
 // admin and logistics can get a maintenance log by id
 router.get('/:id', verifyToken, allowRoles('admin', 'logistics'), maintenanceLogController.getMaintenanceLogById);
 

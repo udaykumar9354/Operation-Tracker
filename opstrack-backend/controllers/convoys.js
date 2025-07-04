@@ -11,24 +11,60 @@ exports.createConvoy = async (req, res) => {
     if (!commanderUser) return res.status(404).json({ error: 'Commander not found' });
     if (commanderUser.role !== 'commander') return res.status(400).json({ error: 'User is not a commander' });
 
+    // Use only the first and last points for the route
+    let start, end;
+    if (route && route.length >= 2) {
+      start = route[0];
+      end = route[route.length - 1];
+    } else {
+      // Default to Srinagar and Baramulla in Indian Kashmir if not enough points
+      start = { latitude: 34.083656, longitude: 74.797371 }; // Srinagar
+      end = { latitude: 34.2090, longitude: 74.3481 }; // Baramulla
+    }
+    const convoyRoute = [start, end];
+
+    // Create convoy first with empty vehicles
     const convoy = new Convoy({
       name,
       commander: commanderUser._id,
-      vehicles: vehicles || [],
       status: status || 'active',
-      route: route || []
+      route: convoyRoute,
+      vehicles: []
     });
 
     const saved = await convoy.save();
     await User.findByIdAndUpdate(commanderUser._id, { convoy: saved._id });
 
+    // Assign vehicles to this convoy if provided
+    if (vehicles && vehicles.length > 0) {
+      await Promise.all(
+        vehicles.map(async (vehicleId, idx) => {
+          // Place vehicles along the line between start and end, evenly spaced
+          const t = (idx + 1) / (vehicles.length + 1); // avoid endpoints
+          const latitude = start.latitude + (end.latitude - start.latitude) * t + (Math.random() - 0.5) * 0.001;
+          const longitude = start.longitude + (end.longitude - start.longitude) * t + (Math.random() - 0.5) * 0.001;
+
+          await Vehicle.findByIdAndUpdate(vehicleId, {
+            convoy: saved._id,
+            currentLocation: { latitude, longitude }
+          });
+        })
+      );
+      // Update convoy with assigned vehicles
+      await Convoy.findByIdAndUpdate(saved._id, { vehicles });
+    }
+
     const populated = await Convoy.findById(saved._id)
       .populate('commander', 'name rank')
-      .populate('vehicles', 'vehicleId type status');
+      .populate({
+        path: 'vehicles',
+        select: 'vehicleId type status currentLocation convoy',
+        populate: { path: 'convoy', select: 'name' }
+      });
 
     res.status(201).json(populated);
   } catch (err) {
-    if (err.code === 11000 && err.keyPattern.name) {
+    if (err.code === 11000 && err.keyPattern?.name) {
       return res.status(400).json({ error: 'Convoy name already exists' });
     }
     res.status(400).json({ error: err.message });

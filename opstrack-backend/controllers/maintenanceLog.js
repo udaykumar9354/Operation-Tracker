@@ -81,6 +81,16 @@ exports.getMaintenanceLogById = async (req, res) => {
   }
 };
 
+// count active maintenance logs
+exports.countActiveMaintenanceLogs = async (req, res) => {
+  try {
+    const count = await MaintenanceLog.countDocuments({ status: 'active' });
+    res.json({ count });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
 // Get a maintenance log by vehicle id  
 exports.getMaintenanceLogByVehicleId = async (req, res) => {
   try {

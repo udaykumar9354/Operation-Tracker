@@ -27,7 +27,7 @@ function AdminDashboard() {
                     fetch(`${API_BASE}/convoys/active`, { headers }),
                     fetch(`${API_BASE}/vehicles/all-vehicles`, { headers }),
                     fetch(`${API_BASE}/users/all-users`, { headers }),
-                    fetch(`${API_BASE}/maintenanceLog/all-logs`, { headers })
+                    fetch(`${API_BASE}/logs/all-logs`, { headers })
                 ]);
 
                 const convoys = await convoysRes.json();

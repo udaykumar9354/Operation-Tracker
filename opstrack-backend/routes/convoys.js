@@ -10,7 +10,7 @@ router.post('/create', verifyToken, allowRoles('admin'), convoyController.create
 router.get('/all-convoys', verifyToken, allowRoles('admin', 'logistics'), convoyController.getAllConvoys);
 
 // get all active convoys (logistics, commander)
-router.get('/active', verifyToken, allowRoles('logistics', 'commander'), convoyController.getActiveConvoys);
+router.get('/active', verifyToken, allowRoles('admin', 'logistics', 'commander'), convoyController.getActiveConvoys);
 
 // commander-specific route 
 router.get('/my-convoy', verifyToken, allowRoles('commander'), convoyController.getMyConvoy);

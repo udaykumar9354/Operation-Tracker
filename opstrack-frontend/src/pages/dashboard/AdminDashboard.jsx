@@ -288,8 +288,19 @@ function AdminDashboard() {
                 <section style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
                     <div style={{ background: '#11251e', borderRadius: '10px', padding: '1.5rem 2.5rem', minWidth: '220px', border: '1px solid #14532d', color: '#d1fae5', marginBottom: '1rem' }}>
                         <h3 style={{ color: '#22c55e', fontSize: '1.15rem', fontWeight: 600, marginBottom: '18px' }}>Convoy Management</h3>
-                        <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%', border: '2px solid #d1fae5' }} onClick={() => navigate('/convoys')}>View Convoys</button>
-                        {/* Add Convoy button moved here */}
+                        <button style={{
+                            background: '#166534',
+                            color: 'white',
+                            border: '2px solid #d1fae5', // keep this if you want the border
+                            borderRadius: '6px',
+                            padding: '10px 18px',
+                            fontSize: '1rem',
+                            fontWeight: 600,
+                            marginBottom: '10px',
+                            marginRight: '8px',
+                            cursor: 'pointer',
+                            width: '100%'
+                        }} onClick={() => navigate('/convoys')}>View Convoys</button>
                         <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%' }} onClick={() => setShowAddConvoy(true)}>Add Convoy</button>
                     </div>
                     <div style={{ background: '#11251e', borderRadius: '10px', padding: '1.5rem 2.5rem', minWidth: '220px', border: '1px solid #14532d', color: '#d1fae5', marginBottom: '1rem' }}>

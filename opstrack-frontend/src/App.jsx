@@ -1,6 +1,6 @@
 import { useContext } from 'react';
 import { AuthContext } from './contexts/AuthContext';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 
 import Login from './pages/login';
 import AdminDashboard from './pages/dashboard/AdminDashboard';
@@ -26,6 +26,13 @@ function DashboardRoutes({ role }) {
 
 function App() {
   const { user, login } = useContext(AuthContext);
+  const location = typeof window !== 'undefined' ? window.location : { pathname: '/' };
+
+  // Option 4: In dev, always redirect to login if not logged in
+  if (import.meta.env.DEV && !user && location.pathname !== '/') {
+    window.location.replace('/');
+    return null;
+  }
 
   return (
     <Router>

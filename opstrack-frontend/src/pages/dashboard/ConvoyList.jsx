@@ -9,16 +9,39 @@ function ConvoyList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedConvoy, setSelectedConvoy] = useState(null);
-  // State for editing coordinates
+  // State for editing
   const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editForm, setEditForm] = useState({ convoyId: '', startLat: '', startLng: '', endLat: '', endLng: '' });
+  const [editForm, setEditForm] = useState({ convoyId: '', name: '', commander: '', status: 'active', startLat: '', startLng: '', endLat: '', endLng: '' });
   const [editLoading, setEditLoading] = useState(false);
   const [editError, setEditError] = useState('');
+  const [commanders, setCommanders] = useState([]);
+  const [deleteError, setDeleteError] = useState('');
+
+  // Fetch commanders
+  useEffect(() => {
+    async function fetchCommanders() {
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch('http://localhost:8080/api/users/all-users', { headers });
+        const users = await res.json();
+        if (Array.isArray(users)) {
+          setCommanders(users.filter(u => u.role === 'commander'));
+        }
+      } catch (err) {
+        setCommanders([]);
+      }
+    }
+    if (editModalOpen) fetchCommanders();
+  }, [editModalOpen]);
 
   // Open edit modal and populate form
   function openEditModal(convoy) {
     setEditForm({
       convoyId: convoy._id,
+      name: convoy.name || '',
+      commander: convoy.commander?._id || convoy.commander || '',
+      status: convoy.status || 'active',
       startLat: convoy.route?.[0]?.latitude || '',
       startLng: convoy.route?.[0]?.longitude || '',
       endLat: convoy.route?.[1]?.latitude || '',
@@ -37,10 +60,27 @@ function ConvoyList() {
     e.preventDefault();
     setEditLoading(true);
     setEditError('');
+    // Validation: name uniqueness
+    const nameExists = convoys.some(c => c.name.trim().toLowerCase() === editForm.name.trim().toLowerCase() && c._id !== editForm.convoyId);
+    if (nameExists) {
+      setEditError('A convoy with this name already exists.');
+      setEditLoading(false);
+      return;
+    }
+    // Validation: commander uniqueness
+    const commanderAssigned = convoys.some(c => (c.commander?._id || c.commander) === editForm.commander && c._id !== editForm.convoyId);
+    if (commanderAssigned) {
+      setEditError('This commander is already assigned to another convoy.');
+      setEditLoading(false);
+      return;
+    }
     try {
       const token = localStorage.getItem('token');
       const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
       const body = JSON.stringify({
+        name: editForm.name,
+        commander: editForm.commander,
+        status: editForm.status,
         route: [
           { latitude: parseFloat(editForm.startLat), longitude: parseFloat(editForm.startLng) },
           { latitude: parseFloat(editForm.endLat), longitude: parseFloat(editForm.endLng) }
@@ -53,13 +93,12 @@ function ConvoyList() {
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error || 'Failed to update coordinates');
+        throw new Error(err.error || 'Failed to update convoy');
       }
       setEditModalOpen(false);
-      setEditForm({ convoyId: '', startLat: '', startLng: '', endLat: '', endLng: '' });
+      setEditForm({ convoyId: '', name: '', commander: '', status: 'active', startLat: '', startLng: '', endLat: '', endLng: '' });
       // Refresh convoys and keep selected convoy updated
       await fetchConvoys();
-      // If the selected convoy was updated, update it in state
       if (selectedConvoy && selectedConvoy._id === editForm.convoyId) {
         const updated = convoys.find(c => c._id === editForm.convoyId);
         setSelectedConvoy(updated || null);
@@ -96,6 +135,27 @@ function ConvoyList() {
   useEffect(() => {
     fetchConvoys();
   }, []);
+
+  async function handleDeleteConvoy(convoyId) {
+    if (!window.confirm('Are you sure you want to delete this convoy?')) return;
+    setDeleteError('');
+    try {
+      const token = localStorage.getItem('token');
+      const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+      const res = await fetch(`http://localhost:8080/api/convoys/${convoyId}`, {
+        method: 'DELETE',
+        headers
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete convoy');
+      }
+      await fetchConvoys();
+      if (selectedConvoy && selectedConvoy._id === convoyId) setSelectedConvoy(null);
+    } catch (err) {
+      setDeleteError(err.message);
+    }
+  }
 
   // Custom blinking icon for selected convoy
   const blinkingIcon = new L.DivIcon({
@@ -154,7 +214,7 @@ function ConvoyList() {
                   <th style={{ padding: '10px', color: '#22c55e' }}>Commander</th>
                   <th style={{ padding: '10px', color: '#22c55e' }}>Route Start</th>
                   <th style={{ padding: '10px', color: '#22c55e' }}>Route End</th>
-                  <th style={{ padding: '10px', color: '#22c55e' }}>Action</th>
+                  <th style={{ padding: '10px', color: '#22c55e', maxWidth: '180px', minWidth: 0 }}>Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -165,17 +225,19 @@ function ConvoyList() {
                     <td style={{ padding: '10px' }}>{convoy.commander?.name || convoy.commander || 'N/A'}</td>
                     <td style={{ padding: '10px' }}>{convoy.route && convoy.route[0] ? `${convoy.route[0].latitude}, ${convoy.route[0].longitude}` : 'N/A'}</td>
                     <td style={{ padding: '10px' }}>{convoy.route && convoy.route[1] ? `${convoy.route[1].latitude}, ${convoy.route[1].longitude}` : 'N/A'}</td>
-                    <td style={{ padding: '10px', display: 'flex', gap: '0.5rem' }}>
-                      <button onClick={() => setSelectedConvoy(convoy)} style={{ background: selectedConvoy?._id === convoy._id ? '#22c55e' : '#166534', color: '#11251e', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>
+                    <td style={{ padding: '10px', display: 'flex', gap: '0.4rem', maxWidth: '180px', minWidth: 0, flexWrap: 'nowrap' }}>
+                      <button onClick={() => setSelectedConvoy(convoy)} style={{ background: selectedConvoy?._id === convoy._id ? '#22c55e' : '#166534', color: '#11251e', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>
                         {selectedConvoy?._id === convoy._id ? 'Selected' : 'Select'}
                       </button>
-                      <button onClick={() => openEditModal(convoy)} style={{ background: '#fbbf24', color: '#11251e', border: 'none', borderRadius: '4px', padding: '6px 12px', cursor: 'pointer', fontWeight: 600 }}>Edit</button>
+                      <button onClick={() => openEditModal(convoy)} style={{ background: '#fbbf24', color: '#11251e', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>Edit</button>
+                      <button onClick={() => handleDeleteConvoy(convoy._id)} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>Delete</button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+          {deleteError && <div style={{ color: '#ef4444', margin: '1rem 0', textAlign: 'center' }}>{deleteError}</div>}
         </div>
         {/* Map Section */}
         <div style={{ flex: 1.2, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'stretch' }}>
@@ -265,24 +327,41 @@ function ConvoyList() {
                     }
                 }
             `}</style>
-      {/* Edit Coordinates Modal */}
+      {/* Edit Modal */}
       {editModalOpen && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-          <form onSubmit={handleEditSubmit} style={{ background: '#1a2e25', padding: '2rem', borderRadius: '12px', minWidth: '340px', color: '#d1fae5', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 2px 16px #0008' }}>
-            <h2 style={{ color: '#22c55e', marginBottom: '1rem' }}>Edit Convoy Coordinates</h2>
+          <form onSubmit={handleEditSubmit} style={{ background: '#1a2e25', padding: '2rem', borderRadius: '12px', minWidth: '340px', color: '#d1fae5', display: 'flex', flexDirection: 'column', gap: '1.2rem', boxShadow: '0 2px 16px #0008' }}>
+            <h2 style={{ color: '#22c55e', marginBottom: '1rem', textAlign: 'center' }}>Edit Convoy Coordinates</h2>
+            <label>Convoy Name:
+              <input name="name" value={editForm.name} onChange={handleEditFormChange} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }} />
+            </label>
+            <label>Status:
+              <select name="status" value={editForm.status} onChange={handleEditFormChange} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }}>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+              </select>
+            </label>
+            <label>Commander:
+              <select name="commander" value={editForm.commander} onChange={handleEditFormChange} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }}>
+                <option value="">Select Commander</option>
+                {commanders.map(cmdr => (
+                  <option key={cmdr._id} value={cmdr._id}>{cmdr.name} ({cmdr._id})</option>
+                ))}
+              </select>
+            </label>
             <label>Start Latitude:
-              <input name="startLat" value={editForm.startLat} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+              <input name="startLat" value={editForm.startLat} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }} />
             </label>
             <label>Start Longitude:
-              <input name="startLng" value={editForm.startLng} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+              <input name="startLng" value={editForm.startLng} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }} />
             </label>
             <label>End Latitude:
-              <input name="endLat" value={editForm.endLat} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+              <input name="endLat" value={editForm.endLat} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }} />
             </label>
             <label>End Longitude:
-              <input name="endLng" value={editForm.endLng} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+              <input name="endLng" value={editForm.endLng} onChange={handleEditFormChange} required type="number" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px', background: '#11251e', color: '#d1fae5' }} />
             </label>
-            {editError && <div style={{ color: '#f87171', marginBottom: '0.5rem' }}>{editError}</div>}
+            {editError && <div style={{ color: '#f87171', marginBottom: '0.5rem', textAlign: 'center' }}>{editError}</div>}
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
               <button type="submit" disabled={editLoading} style={{ background: '#22c55e', color: '#11251e', fontWeight: 700, border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Save</button>
               <button type="button" onClick={() => setEditModalOpen(false)} style={{ background: '#14532d', color: '#d1fae5', border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Cancel</button>

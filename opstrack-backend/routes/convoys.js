@@ -12,6 +12,9 @@ router.get('/all-convoys', verifyToken, allowRoles('admin', 'logistics'), convoy
 // get all active convoys (logistics, commander)
 router.get('/active', verifyToken, allowRoles('admin', 'logistics', 'commander'), convoyController.getActiveConvoys);
 
+// get vehicles of a convoy (admin, logistics, commander)
+router.get('/:id/vehicles', verifyToken, allowRoles('admin', 'logistics', 'commander'), convoyController.getConvoyVehicles);
+
 // commander-specific route 
 router.get('/my-convoy', verifyToken, allowRoles('commander'), convoyController.getMyConvoy);
 

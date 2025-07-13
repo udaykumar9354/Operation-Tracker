@@ -9,6 +9,10 @@ function ConvoyList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedConvoy, setSelectedConvoy] = useState(null);
+  // Add state for vehicles of selected convoy
+  const [selectedConvoyVehicles, setSelectedConvoyVehicles] = useState([]);
+  const [vehicleLoading, setVehicleLoading] = useState(false);
+  const [vehicleError, setVehicleError] = useState("");
   // State for editing
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [editForm, setEditForm] = useState({ convoyId: '', name: '', commander: '', status: 'active', startLat: '', startLng: '', endLat: '', endLng: '' });
@@ -34,6 +38,38 @@ function ConvoyList() {
     }
     if (editModalOpen) fetchCommanders();
   }, [editModalOpen]);
+
+  // Fetch vehicles for selected convoy
+  useEffect(() => {
+    async function fetchVehiclesForConvoy(convoyId) {
+      setVehicleLoading(true);
+      setVehicleError("");
+      setSelectedConvoyVehicles([]);
+      if (!convoyId) return;
+      try {
+        const token = localStorage.getItem('token');
+        const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+        const res = await fetch(`http://localhost:8080/api/vehicles/convoy/${convoyId}`, { headers });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || err.message || 'Failed to fetch vehicles');
+        }
+        const data = await res.json();
+        setSelectedConvoyVehicles(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setVehicleError(err.message || 'Failed to fetch vehicles');
+        setSelectedConvoyVehicles([]);
+      } finally {
+        setVehicleLoading(false);
+      }
+    }
+    if (selectedConvoy && selectedConvoy._id) {
+      fetchVehiclesForConvoy(selectedConvoy._id);
+    } else {
+      setSelectedConvoyVehicles([]);
+      setVehicleError("");
+    }
+  }, [selectedConvoy]);
 
   // Open edit modal and populate form
   function openEditModal(convoy) {
@@ -226,7 +262,7 @@ function ConvoyList() {
                     <td style={{ padding: '10px' }}>{convoy.route && convoy.route[0] ? `${convoy.route[0].latitude}, ${convoy.route[0].longitude}` : 'N/A'}</td>
                     <td style={{ padding: '10px' }}>{convoy.route && convoy.route[1] ? `${convoy.route[1].latitude}, ${convoy.route[1].longitude}` : 'N/A'}</td>
                     <td style={{ padding: '10px', display: 'flex', gap: '0.4rem', maxWidth: '180px', minWidth: 0, flexWrap: 'nowrap' }}>
-                      <button onClick={() => setSelectedConvoy(convoy)} style={{ background: selectedConvoy?._id === convoy._id ? '#22c55e' : '#166534', color: '#11251e', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>
+                      <button onClick={() => { setSelectedConvoy(convoy); }} style={{ background: selectedConvoy?._id === convoy._id ? '#22c55e' : '#166534', color: '#11251e', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>
                         {selectedConvoy?._id === convoy._id ? 'Selected' : 'Select'}
                       </button>
                       <button onClick={() => openEditModal(convoy)} style={{ background: '#fbbf24', color: '#11251e', border: 'none', borderRadius: '4px', padding: '4px 10px', fontWeight: 600, fontSize: '0.95rem', cursor: 'pointer', minWidth: 0, whiteSpace: 'nowrap' }}>Edit</button>
@@ -303,7 +339,63 @@ function ConvoyList() {
                   )}
                 </>
               ))}
+              {/* Vehicle markers for selected convoy */}
+              {selectedConvoyVehicles && selectedConvoyVehicles.length > 0 && selectedConvoyVehicles.map(vehicle => (
+                vehicle.currentLocation && (
+                  <Marker
+                    key={vehicle._id + '-vehicle'}
+                    position={[vehicle.currentLocation.latitude, vehicle.currentLocation.longitude]}
+                    icon={new L.DivIcon({
+                      className: 'vehicle-marker',
+                      iconSize: [18, 18],
+                      html: '<div style="background:#fbbf24;border-radius:50%;width:14px;height:14px;border:2px solid #fff;"></div>'
+                    })}
+                  >
+                    <Popup>
+                      <b>Vehicle: {vehicle.vehicleId}</b><br />
+                      Type: {vehicle.type}<br />
+                      Status: {vehicle.status}<br />
+                      Lat: {vehicle.currentLocation.latitude}<br />
+                      Lng: {vehicle.currentLocation.longitude}
+                    </Popup>
+                  </Marker>
+                )
+              ))}
             </MapContainer>
+          </div>
+          {/* Vehicle list for selected convoy */}
+          <div style={{ background: '#1a2e25', color: '#d1fae5', borderRadius: '8px', marginTop: '1rem', padding: '1rem', minHeight: '80px' }}>
+            <h3 style={{ color: '#fbbf24', margin: 0, marginBottom: '0.5rem' }}>Vehicles in Selected Convoy</h3>
+            {vehicleLoading ? (
+              <div>Loading vehicles...</div>
+            ) : vehicleError ? (
+              <div style={{ color: '#ef4444' }}>{vehicleError}</div>
+            ) : selectedConvoyVehicles.length === 0 ? (
+              <div>No vehicles assigned to this convoy.</div>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse', background: 'transparent' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid #14532d' }}>
+                    <th style={{ padding: '6px', color: '#fbbf24' }}>Vehicle ID</th>
+                    <th style={{ padding: '6px', color: '#fbbf24' }}>Type</th>
+                    <th style={{ padding: '6px', color: '#fbbf24' }}>Status</th>
+                    <th style={{ padding: '6px', color: '#fbbf24' }}>Latitude</th>
+                    <th style={{ padding: '6px', color: '#fbbf24' }}>Longitude</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {selectedConvoyVehicles.map(vehicle => (
+                    <tr key={vehicle._id}>
+                      <td style={{ padding: '6px' }}>{vehicle.vehicleId}</td>
+                      <td style={{ padding: '6px' }}>{vehicle.type}</td>
+                      <td style={{ padding: '6px' }}>{vehicle.status}</td>
+                      <td style={{ padding: '6px' }}>{vehicle.currentLocation?.latitude ?? 'N/A'}</td>
+                      <td style={{ padding: '6px' }}>{vehicle.currentLocation?.longitude ?? 'N/A'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       </div>

@@ -28,7 +28,7 @@ function App() {
   const { user, login } = useContext(AuthContext);
   const location = typeof window !== 'undefined' ? window.location : { pathname: '/' };
 
-  // Option 4: In dev, always redirect to login if not logged in
+  
   if (import.meta.env.DEV && !user && location.pathname !== '/') {
     window.location.replace('/');
     return null;

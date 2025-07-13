@@ -253,3 +253,18 @@ exports.deleteAllConvoys = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+
+// Get convoy vehicles
+exports.getConvoyVehicles = async (req, res) => {
+  try {
+    const convoy = await Convoy.findById(req.params.id)
+      .populate('vehicles', 'vehicleId type status currentLocation convoy');
+
+    if (!convoy) return res.status(404).json({ message: 'Convoy not found' });
+
+    res.json(convoy.vehicles);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

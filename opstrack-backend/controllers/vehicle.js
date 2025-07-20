@@ -1,6 +1,7 @@
 const Vehicle = require('../models/Vehicle');
 const Convoy = require('../models/Convoy');
 const User = require('../models/User');
+const ActivityLog = require('../models/ActivityLog');
 
 async function syncConvoyVehicleAssignment(vehicleId, oldConvoyId, newConvoyId) {
   if (oldConvoyId && (!newConvoyId || oldConvoyId.toString() !== newConvoyId.toString())) {
@@ -11,7 +12,7 @@ async function syncConvoyVehicleAssignment(vehicleId, oldConvoyId, newConvoyId) 
   }
 }
 
-// Create a new vehicle
+// Create a new vehicle, default coordinates in delhi
 exports.createVehicle = async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'logistics') {
@@ -29,6 +30,13 @@ exports.createVehicle = async (req, res) => {
 
     // Default vehicle status to 'operational' if not provided
     if (!data.status) data.status = 'operational';
+
+    // Default coordinates to Delhi if not provided
+    if (!data.currentLocation ||
+      typeof data.currentLocation.latitude !== 'number' ||
+      typeof data.currentLocation.longitude !== 'number') {
+      data.currentLocation = { latitude: 28.6139, longitude: 77.2090 };
+    }
 
     const vehicle = new Vehicle({ ...data, convoy });
     const saved = await vehicle.save();
@@ -87,6 +95,26 @@ exports.assignVehicleToConvoy = async (req, res) => {
       return res.status(400).json({ message: 'Vehicle is not operational or under maintenance' });
     }
 
+    // Set vehicle location based on convoy status and route
+    if (Array.isArray(convoy.route) && convoy.route.length >= 2) {
+      const start = convoy.route[0];
+      const end = convoy.route[convoy.route.length - 1];
+      if (convoy.status === 'active') {
+        // Midpoint
+        vehicle.currentLocation = {
+          latitude: (start.latitude + end.latitude) / 2,
+          longitude: (start.longitude + end.longitude) / 2
+        };
+      } else if (convoy.status === 'completed') {
+        // End point
+        vehicle.currentLocation = {
+          latitude: end.latitude,
+          longitude: end.longitude
+        };
+      }
+      // For other statuses, do not update location
+    }
+
     vehicle.convoy = convoyId;
     await vehicle.save();
 
@@ -94,6 +122,15 @@ exports.assignVehicleToConvoy = async (req, res) => {
       convoyId,
       { $addToSet: { vehicles: vehicleId } }
     );
+
+    // Log activity
+    await ActivityLog.create({
+      type: 'vehicle_assigned',
+      message: `Vehicle ${vehicle.vehicleId} assigned to convoy ${convoy.name}`,
+      entityType: 'Vehicle',
+      entityId: vehicle._id,
+      meta: { vehicleId: vehicle.vehicleId, convoyId: convoy._id, convoyName: convoy.name }
+    });
 
     res.json({
       message: 'Vehicle assigned to convoy',
@@ -160,7 +197,7 @@ exports.updateVehicle = async (req, res) => {
   }
 };
 
-// Patch vehicle (partial update - PATCH)
+// Patch vehicle (partial update - PATCH), changing convoy
 exports.patchVehicle = async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'logistics') {
@@ -171,7 +208,7 @@ exports.patchVehicle = async (req, res) => {
     if (!oldVehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
     const oldConvoyId = oldVehicle.convoy ? oldVehicle.convoy.toString() : null;
-    const newConvoyId = req.body.convoy || null;
+    const newConvoyId = req.body.hasOwnProperty('convoy') ? req.body.convoy : oldConvoyId;
 
     req.body.lastUpdated = new Date();
 
@@ -180,6 +217,18 @@ exports.patchVehicle = async (req, res) => {
     });
 
     await syncConvoyVehicleAssignment(updated._id, oldConvoyId, newConvoyId);
+
+    // Log unassignment if convoy is being removed (oldConvoyId existed, newConvoyId is null)
+    if (oldConvoyId && (newConvoyId === null || newConvoyId === undefined || newConvoyId === 'null' || newConvoyId === '')) {
+      const oldConvoy = await Convoy.findById(oldConvoyId);
+      await ActivityLog.create({
+        type: 'vehicle_unassigned',
+        message: `Vehicle ${updated.vehicleId} unassigned from convoy ${oldConvoy ? oldConvoy.name : oldConvoyId}`,
+        entityType: 'Vehicle',
+        entityId: updated._id,
+        meta: { vehicleId: updated.vehicleId, convoyId: oldConvoyId, convoyName: oldConvoy ? oldConvoy.name : undefined }
+      });
+    }
 
     res.json(updated);
   } catch (err) {

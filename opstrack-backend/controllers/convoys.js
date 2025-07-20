@@ -1,6 +1,7 @@
 const Convoy = require('../models/Convoy');
 const User = require('../models/User');
 const Vehicle = require('../models/Vehicle');
+const ActivityLog = require('../models/ActivityLog');
 
 // Create a new convoy
 exports.createConvoy = async (req, res) => {
@@ -147,6 +148,10 @@ exports.updateConvoy = async (req, res) => {
       newCommanderId = commander;
     }
 
+    // Detect status change to completed
+    const wasActive = oldConvoy.status !== 'completed';
+    const willBeCompleted = updateData.status === 'completed';
+
     const updated = await Convoy.findByIdAndUpdate(
       req.params.id,
       updateData,
@@ -157,6 +162,17 @@ exports.updateConvoy = async (req, res) => {
     if (oldCommanderId && oldCommanderId.toString() !== newCommanderId.toString()) {
       await User.findByIdAndUpdate(oldCommanderId, { convoy: null });
       await User.findByIdAndUpdate(newCommanderId, { convoy: req.params.id });
+    }
+
+    // Log activity if convoy completed
+    if (wasActive && willBeCompleted) {
+      await ActivityLog.create({
+        type: 'convoy_completed',
+        message: `Convoy ${updated.name} has been completed`,
+        entityType: 'Convoy',
+        entityId: updated._id,
+        meta: { convoyId: updated._id, convoyName: updated.name }
+      });
     }
 
     res.json(updated);

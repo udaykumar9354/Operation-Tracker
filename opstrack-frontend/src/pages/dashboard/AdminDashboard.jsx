@@ -45,6 +45,10 @@ function AdminDashboard() {
     const [vehicleFormLoading, setVehicleFormLoading] = useState(false);
     const [vehicleFormError, setVehicleFormError] = useState('');
 
+    const [activityLogs, setActivityLogs] = useState([]);
+    const [activityLoading, setActivityLoading] = useState(true);
+    const [activityError, setActivityError] = useState("");
+
     useEffect(() => {
         async function fetchStats() {
             setLoading(true);
@@ -243,6 +247,45 @@ function AdminDashboard() {
         }
     }
 
+    // Fetch activity logs for today
+    async function fetchActivityLogs() {
+        setActivityLoading(true);
+        setActivityError("");
+        try {
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            const dateStr = `${yyyy}-${mm}-${dd}`;
+            const res = await fetch(`${API_BASE}/activity-logs?date=${dateStr}`, { headers });
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setActivityLogs(data);
+            } else {
+                setActivityLogs([]);
+            }
+        } catch (err) {
+            setActivityError('Failed to fetch activity logs');
+            setActivityLogs([]);
+        } finally {
+            setActivityLoading(false);
+        }
+    }
+
+    // Fetch on mount and at midnight
+    useEffect(() => {
+        fetchActivityLogs();
+        // Set up timer to refresh at midnight
+        const now = new Date();
+        const msToMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1) - now;
+        const timeout = setTimeout(() => {
+            fetchActivityLogs();
+        }, msToMidnight);
+        return () => clearTimeout(timeout);
+    }, []);
+
     const navigate = useNavigate();
 
     return (
@@ -315,9 +358,24 @@ function AdminDashboard() {
                     </div>
                     <div style={{ background: '#11251e', borderRadius: '10px', padding: '1.5rem 2.5rem', minWidth: '220px', border: '1px solid #14532d', color: '#d1fae5', marginBottom: '1rem' }}>
                         <h3 style={{ color: '#22c55e', fontSize: '1.15rem', fontWeight: 600, marginBottom: '18px' }}>Recent Activity</h3>
-                        <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#d1fae5', fontSize: '0.98rem' }}>
-                            <li>No recent activity.</li>
-                        </ul>
+                        {activityLoading ? (
+                            <div>Loading...</div>
+                        ) : activityError ? (
+                            <div style={{ color: '#f87171' }}>{activityError}</div>
+                        ) : activityLogs.length === 0 ? (
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#d1fae5', fontSize: '0.98rem' }}>
+                                <li>No activity today.</li>
+                            </ul>
+                        ) : (
+                            <ul style={{ listStyle: 'none', padding: 0, margin: 0, color: '#d1fae5', fontSize: '0.98rem' }}>
+                                {activityLogs.map(log => (
+                                    <li key={log._id} style={{ marginBottom: '0.5rem', display: 'flex', alignItems: 'flex-start' }}>
+                                        <span style={{ color: '#22c55e', marginRight: '0.5rem', fontWeight: 700 }}>&#8226;</span>
+                                        <span>{log.message}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </div>
                 </section>
                 {/* Add Convoy Modal */}

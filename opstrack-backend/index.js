@@ -28,6 +28,9 @@ app.use('/api/logs', maintenanceLogsRoute);
 const usersRoute = require('./routes/user');
 app.use('/api/users', usersRoute);
 
+const activityLogRoutes = require('./routes/activityLog');
+app.use('/api/activity-logs', activityLogRoutes);
+
 
 const PORT = process.env.PORT || 5000;
 

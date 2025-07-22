@@ -1,7 +1,6 @@
 const Vehicle = require('../models/Vehicle');
 const Convoy = require('../models/Convoy');
 const User = require('../models/User');
-const ActivityLog = require('../models/ActivityLog');
 
 async function syncConvoyVehicleAssignment(vehicleId, oldConvoyId, newConvoyId) {
   if (oldConvoyId && (!newConvoyId || oldConvoyId.toString() !== newConvoyId.toString())) {
@@ -123,15 +122,6 @@ exports.assignVehicleToConvoy = async (req, res) => {
       { $addToSet: { vehicles: vehicleId } }
     );
 
-    // Log activity
-    await ActivityLog.create({
-      type: 'vehicle_assigned',
-      message: `Vehicle ${vehicle.vehicleId} assigned to convoy ${convoy.name}`,
-      entityType: 'Vehicle',
-      entityId: vehicle._id,
-      meta: { vehicleId: vehicle.vehicleId, convoyId: convoy._id, convoyName: convoy.name }
-    });
-
     res.json({
       message: 'Vehicle assigned to convoy',
       vehicle: vehicle.vehicleId,
@@ -197,7 +187,7 @@ exports.updateVehicle = async (req, res) => {
   }
 };
 
-// Patch vehicle (partial update - PATCH), changing convoy
+// Patch vehicle (partial update - PATCH), ,changing convoy
 exports.patchVehicle = async (req, res) => {
   try {
     if (req.user.role !== 'admin' && req.user.role !== 'logistics') {
@@ -208,7 +198,7 @@ exports.patchVehicle = async (req, res) => {
     if (!oldVehicle) return res.status(404).json({ error: 'Vehicle not found' });
 
     const oldConvoyId = oldVehicle.convoy ? oldVehicle.convoy.toString() : null;
-    const newConvoyId = req.body.hasOwnProperty('convoy') ? req.body.convoy : oldConvoyId;
+    const newConvoyId = req.body.convoy || null;
 
     req.body.lastUpdated = new Date();
 
@@ -217,18 +207,6 @@ exports.patchVehicle = async (req, res) => {
     });
 
     await syncConvoyVehicleAssignment(updated._id, oldConvoyId, newConvoyId);
-
-    // Log unassignment if convoy is being removed (oldConvoyId existed, newConvoyId is null)
-    if (oldConvoyId && (newConvoyId === null || newConvoyId === undefined || newConvoyId === 'null' || newConvoyId === '')) {
-      const oldConvoy = await Convoy.findById(oldConvoyId);
-      await ActivityLog.create({
-        type: 'vehicle_unassigned',
-        message: `Vehicle ${updated.vehicleId} unassigned from convoy ${oldConvoy ? oldConvoy.name : oldConvoyId}`,
-        entityType: 'Vehicle',
-        entityId: updated._id,
-        meta: { vehicleId: updated.vehicleId, convoyId: oldConvoyId, convoyName: oldConvoy ? oldConvoy.name : undefined }
-      });
-    }
 
     res.json(updated);
   } catch (err) {

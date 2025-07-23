@@ -9,6 +9,7 @@ import LogisticsDashboard from './pages/dashboard/LogisticsDashboard';
 import ConvoyList from './pages/dashboard/ConvoyList';
 import UserList from './pages/dashboard/UserList';
 import VehicleList from './pages/dashboard/VehicleList';
+import MaintenanceLogsList from './pages/dashboard/MaintenanceLogsList';
 
 
 function DashboardRoutes({ role }) {
@@ -28,7 +29,7 @@ function App() {
   const { user, login } = useContext(AuthContext);
   const location = typeof window !== 'undefined' ? window.location : { pathname: '/' };
 
-  
+
   if (import.meta.env.DEV && !user && location.pathname !== '/') {
     window.location.replace('/');
     return null;
@@ -68,6 +69,13 @@ function App() {
           path="/vehicles"
           element={
             user ? <VehicleList /> : <Navigate to="/" />
+          }
+        />
+        {/* Route for viewing all maintenance logs */}
+        <Route
+          path="/maintenance-logs"
+          element={
+            user ? <MaintenanceLogsList /> : <Navigate to="/" />
           }
         />
       </Routes>

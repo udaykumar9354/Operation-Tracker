@@ -44,6 +44,19 @@ function AdminDashboard() {
     const [vehicleForm, setVehicleForm] = useState({ vehicleId: '', type: '', status: 'active', currentLocation: { latitude: '', longitude: '' } });
     const [vehicleFormLoading, setVehicleFormLoading] = useState(false);
     const [vehicleFormError, setVehicleFormError] = useState('');
+    // State for Add Maintenance Log modal
+    const [showAddMaintenanceLog, setShowAddMaintenanceLog] = useState(false);
+    const [maintenanceLogForm, setMaintenanceLogForm] = useState({
+        vehicle: '',
+        description: '',
+        serviceProvider: '',
+        cost: '',
+        date: '',
+        nextScheduledMaintenance: ''
+    });
+    const [maintenanceLogFormLoading, setMaintenanceLogFormLoading] = useState(false);
+    const [maintenanceLogFormError, setMaintenanceLogFormError] = useState('');
+    const [availableVehicles, setAvailableVehicles] = useState([]);
 
     useEffect(() => {
         async function fetchStats() {
@@ -106,6 +119,24 @@ function AdminDashboard() {
         }
         fetchCommanders();
     }, []);
+
+    // Fetch available vehicles for maintenance log modal
+    useEffect(() => {
+        if (showAddMaintenanceLog) {
+            async function fetchVehicles() {
+                try {
+                    const token = localStorage.getItem('token');
+                    const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+                    const res = await fetch(`${API_BASE}/vehicles/all-vehicles`, { headers });
+                    const vehicles = await res.json();
+                    setAvailableVehicles(Array.isArray(vehicles) ? vehicles : []);
+                } catch (err) {
+                    setAvailableVehicles([]);
+                }
+            }
+            fetchVehicles();
+        }
+    }, [showAddMaintenanceLog]);
 
     // Handler for form input changes
     function handleFormChange(e) {
@@ -242,6 +273,38 @@ function AdminDashboard() {
             setVehicleFormLoading(false);
         }
     }
+    // Handlers for Maintenance Log form
+    function handleMaintenanceLogFormChange(e) {
+        const { name, value } = e.target;
+        setMaintenanceLogForm(prev => ({ ...prev, [name]: value }));
+    }
+    async function handleAddMaintenanceLog(e) {
+        e.preventDefault();
+        setMaintenanceLogFormLoading(true);
+        setMaintenanceLogFormError('');
+        try {
+            const token = localStorage.getItem('token');
+            const headers = { 'Content-Type': 'application/json', ...(token ? { 'Authorization': `Bearer ${token}` } : {}) };
+            const formToSend = { ...maintenanceLogForm };
+            if (formToSend.cost === '') delete formToSend.cost;
+            else formToSend.cost = Number(formToSend.cost);
+            if (!formToSend.date) delete formToSend.date;
+            if (!formToSend.nextScheduledMaintenance) delete formToSend.nextScheduledMaintenance;
+            const body = JSON.stringify(formToSend);
+            const res = await fetch(`${API_BASE}/logs/create`, { method: 'POST', headers, body });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error || 'Failed to create maintenance log');
+            }
+            setShowAddMaintenanceLog(false);
+            setMaintenanceLogForm({ vehicle: '', description: '', serviceProvider: '', cost: '', date: '', nextScheduledMaintenance: '' });
+            fetchStats();
+        } catch (err) {
+            setMaintenanceLogFormError(err.message);
+        } finally {
+            setMaintenanceLogFormLoading(false);
+        }
+    }
 
     const navigate = useNavigate();
 
@@ -312,6 +375,12 @@ function AdminDashboard() {
                         <h3 style={{ color: '#22c55e', fontSize: '1.15rem', fontWeight: 600, marginBottom: '18px' }}>User Management</h3>
                         <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%' }} onClick={() => navigate('/users')}>View Users</button>
                         <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%' }} onClick={() => setShowAddUser(true)}>Add User</button>
+                    </div>
+                    {/* Maintenance Logs Management */}
+                    <div style={{ background: '#11251e', borderRadius: '10px', padding: '1.5rem 2.5rem', minWidth: '220px', border: '1px solid #14532d', color: '#d1fae5', marginBottom: '1rem' }}>
+                        <h3 style={{ color: '#22c55e', fontSize: '1.15rem', fontWeight: 600, marginBottom: '18px' }}>Maintenance Logs Management</h3>
+                        <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%' }} onClick={() => navigate('/maintenance-logs')}>View Logs</button>
+                        <button style={{ background: '#166534', color: 'white', border: 'none', borderRadius: '6px', padding: '10px 18px', fontSize: '1rem', fontWeight: 600, marginBottom: '10px', marginRight: '8px', cursor: 'pointer', width: '100%' }} onClick={() => setShowAddMaintenanceLog(true)}>Add Log</button>
                     </div>
                     <div style={{ background: '#11251e', borderRadius: '10px', padding: '1.5rem 2.5rem', minWidth: '220px', border: '1px solid #14532d', color: '#d1fae5', marginBottom: '1rem' }}>
                         <h3 style={{ color: '#22c55e', fontSize: '1.15rem', fontWeight: 600, marginBottom: '18px' }}>Recent Activity</h3>
@@ -427,6 +496,53 @@ function AdminDashboard() {
                             <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
                                 <button type="submit" disabled={vehicleFormLoading} style={{ background: '#22c55e', color: '#11251e', fontWeight: 700, border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Create Vehicle</button>
                                 <button type="button" onClick={() => setShowAddVehicle(false)} style={{ background: '#14532d', color: '#d1fae5', border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+                {/* Add Maintenance Log Modal */}
+                {showAddMaintenanceLog && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                        <form onSubmit={handleAddMaintenanceLog} style={{ background: '#1a2e25', padding: '2rem', borderRadius: '12px', minWidth: '340px', color: '#d1fae5', display: 'flex', flexDirection: 'column', gap: '1rem', boxShadow: '0 2px 16px #0008' }}>
+                            <h2 style={{ color: '#22c55e', marginBottom: '1rem' }}>Add New Maintenance Log</h2>
+                            <label>Vehicle:
+                                <select name="vehicle" value={maintenanceLogForm.vehicle} onChange={handleMaintenanceLogFormChange} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }}>
+                                    <option value="">Select Vehicle</option>
+                                    {availableVehicles.map(v => (
+                                        <option key={v._id || v.vehicleId} value={v._id || v.vehicleId}>{v.vehicleId || v._id}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label>Description:
+                                <select name="description" value={maintenanceLogForm.description} onChange={handleMaintenanceLogFormChange} required style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }}>
+                                    <option value="">Select Description</option>
+                                    <option value="Oil Change">Oil Change</option>
+                                    <option value="Tire Rotation">Tire Rotation</option>
+                                    <option value="Brake Inspection">Brake Inspection</option>
+                                    <option value="Engine Tune-up">Engine Tune-up</option>
+                                    <option value="Transmission Service">Transmission Service</option>
+                                    <option value="Battery Replacement">Battery Replacement</option>
+                                    <option value="Fluid Check">Fluid Check</option>
+                                    <option value="Filter Replacement">Filter Replacement</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </label>
+                            <label>Service Provider:
+                                <input name="serviceProvider" value={maintenanceLogForm.serviceProvider} onChange={handleMaintenanceLogFormChange} style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+                            </label>
+                            <label>Cost:
+                                <input name="cost" value={maintenanceLogForm.cost} onChange={handleMaintenanceLogFormChange} type="number" min="0" step="any" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+                            </label>
+                            <label>Date:
+                                <input name="date" value={maintenanceLogForm.date} onChange={handleMaintenanceLogFormChange} type="datetime-local" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+                            </label>
+                            <label>Next Scheduled Maintenance:
+                                <input name="nextScheduledMaintenance" value={maintenanceLogForm.nextScheduledMaintenance} onChange={handleMaintenanceLogFormChange} type="date" style={{ width: '100%', padding: '6px', borderRadius: '4px', border: '1px solid #14532d', marginTop: '4px' }} />
+                            </label>
+                            {maintenanceLogFormError && <div style={{ color: '#f87171', marginBottom: '0.5rem' }}>{maintenanceLogFormError}</div>}
+                            <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                                <button type="submit" disabled={maintenanceLogFormLoading} style={{ background: '#22c55e', color: '#11251e', fontWeight: 700, border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Create Log</button>
+                                <button type="button" onClick={() => setShowAddMaintenanceLog(false)} style={{ background: '#14532d', color: '#d1fae5', border: 'none', borderRadius: '6px', padding: '10px 18px', cursor: 'pointer', flex: 1 }}>Cancel</button>
                             </div>
                         </form>
                     </div>

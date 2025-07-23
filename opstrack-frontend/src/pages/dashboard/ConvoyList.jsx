@@ -209,6 +209,77 @@ function ConvoyList() {
     return null;
   }
 
+  // Helper: check if a point is within India's bounding box
+  function isWithinIndia(lat, lng) {
+    // India's rough bounding box: 6.5N-37.1N, 68.1E-97.4E
+    return lat >= 6.5 && lat <= 37.1 && lng >= 68.1 && lng <= 97.4;
+  }
+
+  // Routing component for selected convoy
+  function Routing({ start, end, color = '#2196f3' }) {
+    const map = useMap();
+    const routingRef = useRef(null);
+    const [routeWarning, setRouteWarning] = useState("");
+
+    useEffect(() => {
+      if (!map || !start || !end) return;
+      // Remove previous routing control if exists
+      if (routingRef.current) {
+        map.removeControl(routingRef.current);
+      }
+      const routingControl = L.Routing.control({
+        waypoints: [
+          L.latLng(start.latitude, start.longitude),
+          L.latLng(end.latitude, end.longitude)
+        ],
+        router: L.Routing.osrmv1({
+          serviceUrl: 'http://router.project-osrm.org/route/v1'
+        }),
+        lineOptions: {
+          styles: [{ color: '#2196f3', weight: 6, opacity: 0.95 }]
+        },
+        show: false,
+        addWaypoints: false,
+        routeWhileDragging: false,
+        fitSelectedRoutes: false,
+        createMarker: () => null,
+        profile: 'car',
+        language: 'en',
+        itineraryFormatter: null,
+        // Remove the default panel
+        itinerary: null,
+        collapsible: false
+      })
+        .on('routesfound', function (e) {
+          // Check if all coordinates are within India
+          const allCoords = e.routes[0].coordinates;
+          const allInIndia = allCoords.every(pt => isWithinIndia(pt.lat, pt.lng));
+          if (!allInIndia) {
+            setRouteWarning('Warning: Route leaves India!');
+          } else {
+            setRouteWarning("");
+          }
+        })
+        .addTo(map);
+      // Remove the directions box if it appears
+      const panel = document.querySelector('.leaflet-routing-container');
+      if (panel) panel.style.display = 'none';
+      routingRef.current = routingControl;
+      return () => {
+        if (routingRef.current) {
+          map.removeControl(routingRef.current);
+        }
+      };
+    }, [map, start, end]);
+
+    // Show warning on map if route leaves India
+    return routeWarning ? (
+      <div style={{ position: 'absolute', top: 10, left: 10, background: '#ef4444', color: '#fff', padding: '8px 16px', borderRadius: '6px', zIndex: 9999 }}>
+        {routeWarning}
+      </div>
+    ) : null;
+  }
+
   return (
     <div style={{
       width: '100vw',
@@ -302,11 +373,16 @@ function ConvoyList() {
                       </Popup>
                     </Marker>
                   )}
-                  {/* Normal markers for all other points */}
-                  {(!selectedConvoy || selectedConvoy._id !== convoy._id) && convoy.route && convoy.route[0] && (
+                  {/* Normal marker for all start points (distinct color) */}
+                  {convoy.route && convoy.route[0] && (
                     <Marker
                       key={convoy._id + '-start'}
                       position={[convoy.route[0].latitude, convoy.route[0].longitude]}
+                      icon={new L.DivIcon({
+                        className: 'start-marker',
+                        iconSize: [18, 18],
+                        html: '<div style="background:#2196f3;border-radius:50%;width:14px;height:14px;border:2px solid #fff;"></div>'
+                      })}
                     >
                       <Popup>
                         <b>{convoy.name} (Start)</b><br />
@@ -326,16 +402,25 @@ function ConvoyList() {
                       </Popup>
                     </Marker>
                   )}
-                  {/* Polyline for route */}
+                  {/* Route: Use Routing for selected, Polyline for others */}
                   {convoy.route && convoy.route.length === 2 && (
-                    <Polyline
-                      key={convoy._id + '-polyline'}
-                      positions={[
-                        [convoy.route[0].latitude, convoy.route[0].longitude],
-                        [convoy.route[1].latitude, convoy.route[1].longitude],
-                      ]}
-                      pathOptions={{ color: selectedConvoy?._id === convoy._id ? '#22c55e' : '#fbbf24', weight: 4, opacity: 0.7 }}
-                    />
+                    <>
+                      {selectedConvoy && selectedConvoy._id === convoy._id ? (
+                        <Routing
+                          start={convoy.route[0]}
+                          end={convoy.route[1]}
+                          color="#2196f3"
+                        />
+                      ) : (
+                        <Polyline
+                          positions={[
+                            [convoy.route[0].latitude, convoy.route[0].longitude],
+                            [convoy.route[1].latitude, convoy.route[1].longitude],
+                          ]}
+                          pathOptions={{ color: '#fbbf24', weight: 4, opacity: 0.7 }}
+                        />
+                      )}
+                    </>
                   )}
                 </>
               ))}
@@ -482,4 +567,4 @@ export default ConvoyList;
   0% { opacity: 1; box-shadow: 0 0 8px 4px #22c55e88; }
   100% { opacity: 0.3; box-shadow: 0 0 16px 8px #22c55e44; }
 }
-`}</style> 
+`}</style>

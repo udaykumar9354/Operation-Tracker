@@ -23,7 +23,7 @@ function MaintenanceLogsList() {
                 setLogs([]);
                 setError(data.message || 'No logs found');
             }
-        } catch (err) {
+        } catch {
             setError('Failed to fetch maintenance logs');
             setLogs([]);
         } finally {
